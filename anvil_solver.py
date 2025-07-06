@@ -72,6 +72,18 @@ def choose_smallest(x, y) -> tuple[tuple[int, ...], tuple[int, ...]] | None:
   ys, yl = y
   return x if len(xs) < len(ys) else y
 
+def find_solution(target: int, required_last_hits: list[Move]) -> tuple[int, ...] | None:
+  smallest = None
+  for suffix in product(*map(lambda x: MOVE_TO_STEPS[x], required_last_hits)):
+    even_smaller_step_count = min(MAX_STEP_COUNT - len(required_last_hits), smallest and len(smallest)-1 or MAX_STEP_COUNT)
+    maybe_solution = solve(target -sum(suffix), even_smaller_step_count, suffix)
+    smallest = choose_smallest(smallest, maybe_solution and (maybe_solution, suffix) or None)
+  if smallest is None:
+    return None
+  ss, sl = smallest
+  solution = ss + sl
+  return solution
+
 def usage():
   moves = ', '.join([m.value for m in Move])
   print(f"""Usage:
@@ -84,6 +96,9 @@ def usage():
   [last]            Um de {moves}
 """)
 
+def format_term(c, v):
+  return ("" if v < 0 else "+") + str(v) + (f"*{c}" if c > 1 else "")
+
 def main(argv) -> None:
   if len(argv) < 2:
     usage()
@@ -91,22 +106,11 @@ def main(argv) -> None:
 
   target = int(argv[1])
   required_last_hits = list(map(Move, argv[2:]))
-  smallest = None
+  solution = find_solution(target, required_last_hits)
 
-  for suffix in product(*map(lambda x: MOVE_TO_STEPS[x], required_last_hits)):
-    even_smaller_step_count = min(MAX_STEP_COUNT - len(required_last_hits), smallest and len(smallest)-1 or MAX_STEP_COUNT)
-    maybe_solution = solve(target -sum(suffix), even_smaller_step_count, suffix)
-    smallest = choose_smallest(smallest, maybe_solution and (maybe_solution, suffix) or None)
-
-  if smallest is None:
+  if solution is None:
     print("No solutions found")
     return
-
-  ss, sl = smallest
-  solution = ss + sl
-
-  def format_term(c, v):
-    return ("" if v < 0 else "+") + str(v) + (f"*{c}" if c > 1 else "")
 
   terms = [format_term(c, v) for c, v in group_consecutive(solution)]
 
